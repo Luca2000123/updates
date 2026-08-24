@@ -85,7 +85,8 @@ title = "MyStreaming"
 description = "Client di streaming per Android, Windows e TV LG webOS."
 icon = "https://raw.githubusercontent.com/Luca2000123/MyStreaming/main/webos/icon.png"
 source_repo = "Luca2000123/MyStreaming"
-release_repo = "Luca2000123/my_streaming-releases"
+release_repo = "Luca2000123/updates"
+tag_prefix = "mystreaming"
 
 [targets.android-all]
 ext = "apk"
@@ -109,11 +110,22 @@ rootRequired = false
 La sezione `[webos]` e' obbligatoria se c'e' un target `webos-*`.
 `requires` e' opzionale e viene passato al client cosi' com'e'.
 
+`tag_prefix` serve quando **piu' app pubblicano nello stesso `release_repo`**: i tag
+diventano `mystreaming-v1.0.0-b67` invece di `v1.0.0-b67`, altrimenti la seconda app che
+rilascia `v1.0.0` trova il tag occupato. Il generatore lo impone: un tag che non comincia col
+prefisso viene rifiutato, e due app con lo stesso `(release_repo, tag_prefix)` non passano
+la validazione. Se un'app ha il suo repo di release tutto suo, si puo' omettere.
+
 ## Pubblicare una release
 
-Il repo dell'app compila e carica gli asset con i nomi convenzionali, poi manda un
-`repository_dispatch` all'hub. L'hub non ricompila e non riscarica niente: si fida degli
+Il repo dell'app compila, crea la Release **in questo repo** con i nomi convenzionali, poi
+manda un `repository_dispatch`. L'hub non ricompila e non riscarica niente: si fida degli
 hash calcolati dove i file sono appena stati prodotti.
+
+I binari stanno nelle Release di `updates`, i manifest su Pages: lo stesso repo fa da
+magazzino e da indice, quindi serve **un solo secret** (`UPDATE_HUB_TOKEN`) nel repo di
+ogni app, sia per caricare gli asset sia per bussare. Le Release non contano nel limite
+di 1 GB del sito Pages: quello riguarda i file generati in `site/`.
 
 Job da aggiungere al workflow di release dell'app:
 
@@ -124,7 +136,6 @@ Job da aggiungere al workflow di release dell'app:
     env:
       APP_ID: com.luca2000123.mystreaming
       HUB_REPO: Luca2000123/updates
-      RELEASES_REPO: Luca2000123/my_streaming-releases
       TAG: ${{ needs.build-and-release.outputs.tag }}
       VERSION: ${{ needs.build-and-release.outputs.version }}
     steps:
@@ -140,11 +151,11 @@ Job da aggiungere al workflow di release dell'app:
 
       - name: Scarica gli asset appena pubblicati
         env:
-          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
-        run: gh release download "$TAG" --repo "$RELEASES_REPO" --dir assets --pattern "${APP_ID}-*"
+          GH_TOKEN: ${{ secrets.UPDATE_HUB_TOKEN }}
+        run: gh release download "$TAG" --repo "$HUB_REPO" --dir assets --pattern "${APP_ID}-*"
 
       - name: Costruisci il payload
-        run: python make_payload.py --app-id "$APP_ID" --version "$VERSION" --tag "$TAG" --repo "$RELEASES_REPO" --dir assets --out payload.json --legacy my_streaming.apk --legacy my_streaming-windows-x64.zip --legacy my_streaming.ipk
+        run: python make_payload.py --app-id "$APP_ID" --version "$VERSION" --tag "$TAG" --repo "$HUB_REPO" --dir assets --out payload.json
 
       - name: Notifica l'hub
         env:
@@ -160,30 +171,19 @@ che rigenera e ridistribuisce il sito.
 Per rimediare a una release sbagliata: lanciare `publish` a mano da Actions, incollando il
 payload e spuntando `allow_rollback`.
 
-## Transizione dal vecchio updater
+## Taglio netto col vecchio updater
 
-Le versioni gia' installate sui telefoni e sulle TV **non si possono cambiare**. Il loro updater
-non legge gli URL dalla risposta dell'API: li ha compilati dentro, nella forma
-`releases/latest/download/<nome-fisso>`. Quindi durante la transizione ogni release deve
-soddisfare tre vincoli, o quelle installazioni restano ferme per sempre:
+Scelta consapevole: **le installazioni antecedenti all'hub non si aggiornano da sole.** Il loro
+updater non legge gli URL dal manifest, li ha compilati dentro nella forma
+`releases/latest/download/<nome-fisso>` di un repo per app, e `latest` non significa piu' nulla
+in un repo condiviso da tante app. Chi ha una versione vecchia la reinstalla a mano una volta;
+dalla successiva l'aggiornamento passa dall'hub.
 
-1. **Gli asset col nome vecchio devono continuare a esistere**, in aggiunta a quelli nuovi.
-   Si dichiarano nel descrittore con `legacy_name` e il generatore lo ricorda a ogni build.
-2. **Il tag deve restare nella forma `v<major>.<minor>.<patch>+<build>`.** Il vecchio parser
-   ripulisce i caratteri non numerici, quindi leggerebbe `v1.0.0-b68` come versione `1.0.68`:
-   piu' alta della locale `1.0.0+68` a ogni avvio, cioe' un aggiornamento proposto in loop
-   e mai risolto. Il tag va passato esplicito con `--tag`; un `+` nel path di un URL di
-   download di GitHub e' legale e funziona (verificato: risponde 206 sia `+` sia `%2B`).
-3. **La release deve restare marcata "latest"**, perche' e' quello che `latest/download`
-   risolve.
-
-Il client nuovo, invece, tiene due sorgenti: prima il manifest dell'hub, e se non risponde
-ricade sul vecchio giro dell'API. Cosi' l'affidabilita' non peggiora mentre Pages diventa la
-strada principale.
-
-La transizione si chiude quando i download dei nomi legacy si azzerano: si togliero'
-`legacy_name` dal descrittore, `--legacy` dal workflow, e il tag potra' tornare alla forma
-normalizzata `v1.0.0-b70`.
+Il prezzo l'abbiamo pagato una volta sola per non trascinarlo: niente asset duplicati col nome
+vecchio, niente tag col `+`, niente doppia sorgente nel client. Se un domani servisse una
+transizione morbida per un'altra app, il descrittore supporta `legacy_name` per target e
+`make_payload.py` ha `--legacy`: dichiarano gli asset col nome vecchio, il generatore ricorda a
+ogni build che devono restare e avvisa se sparivano.
 
 ## Cosa fa il client con `install`
 
@@ -214,8 +214,10 @@ normalizzata `v1.0.0-b70`.
 
 - **Pages**: Settings → Pages → Source: **GitHub Actions**. Il primo `build-site` pubblica.
 - **Token**: un PAT fine-grained sul solo repo `updates`, permesso *Contents: read and write*,
-  salvato come secret `UPDATE_HUB_TOKEN` nel repo di ogni app. Se le app finiscono in una
-  organizzazione, diventa un organization secret e si ruota in un posto solo.
+  salvato come secret `UPDATE_HUB_TOKEN` nel repo di ogni app. Lo stesso permesso copre le tre
+  cose che il workflow di un'app fa qui: creare la Release, caricare gli asset, mandare il
+  dispatch. Se le app finiscono in una organizzazione, diventa un organization secret e si
+  ruota in un posto solo.
 - `base_url` in `hub.toml` deve combaciare con l'URL reale di Pages.
 
 ## Comandi locali
@@ -242,3 +244,7 @@ va committato.
 - **`signature` esiste ed e' `null`**: quando verra' popolata, i client vecchi non si rompono.
 - **Il redirect dal dominio `*.github.io` verso un dominio custom non e' documentato**: l'unica
   garanzia di portabilita' e' `manifest_url_next`.
+- **Piu' app nello stesso repo di release si pestano i tag**: `tag_prefix` per app, e
+  `latest/download` non si usa mai (l'URL nel manifest ha il tag esatto).
+- **Registrare due volte lo stesso `version_code`** rende il rilascio invisibile ai client: il
+  generatore lo rifiuta invece di pubblicarlo.

@@ -471,5 +471,58 @@ class TestTransizioneLegacy(HubFixture):
         self.assertTrue(url.endswith("-1.0.0-b66-android-all.apk"))
 
 
+class TestTagPrefix(HubFixture):
+    def con_prefix(self):
+        path = self.root / "apps" / f"{APP_ID}.toml"
+        path.write_text(
+            APP_TOML.replace(
+                'release_repo = "acme/testapp-releases"',
+                'release_repo = "acme/updates"\ntag_prefix = "testapp"',
+            ),
+            encoding="utf-8",
+        )
+
+    def test_prefix_invalido_rifiutato(self):
+        path = self.root / "apps" / f"{APP_ID}.toml"
+        path.write_text(
+            APP_TOML.replace(
+                'release_repo = "acme/testapp-releases"',
+                'tag_prefix = "Test App"',
+            ),
+            encoding="utf-8",
+        )
+        with self.assertRaises(HubError):
+            self.app()
+
+    def test_tag_default_prefissato(self):
+        self.con_prefix()
+        release = hublib.normalize_release(payload(), self.app())
+        self.assertEqual(release["tag"], "testapp-v1.0.0-b66")
+        self.assertEqual(release["repo"], "acme/updates")
+
+    def test_tag_esplicito_senza_prefisso_rifiutato(self):
+        self.con_prefix()
+        with self.assertRaises(HubError) as ctx:
+            hublib.normalize_release(payload(tag="v1.0.0-b66"), self.app())
+        self.assertIn("collide", str(ctx.exception))
+
+    def test_url_usa_il_tag_prefissato(self):
+        self.con_prefix()
+        self.record(payload())
+        files, _, _ = self.build()
+        url = files[f"v1/apps/{APP_ID}/stable.json"]["platforms"]["android-all"]["url"]
+        self.assertIn("/acme/updates/releases/download/testapp-v1.0.0-b66/", url)
+
+    def test_due_app_nello_stesso_repo_senza_prefisso_distinto(self):
+        altra = self.root / "apps" / "dev.local.altra.toml"
+        altra.write_text(
+            APP_TOML.replace('id = "dev.local.testapp"', 'id = "dev.local.altra"'),
+            encoding="utf-8",
+        )
+        with self.assertRaises(HubError) as ctx:
+            hublib.load_apps(self.root)
+        self.assertIn("collidono", str(ctx.exception))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

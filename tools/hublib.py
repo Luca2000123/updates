@@ -27,6 +27,7 @@ RE_SEMVER_PURE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 RE_SHA256 = re.compile(r"^[0-9a-f]{64}$")
 RE_REPO = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 RE_EXT = re.compile(r"^[a-z0-9]{2,8}$")
+RE_TAG_PREFIX = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 
 class HubError(Exception):
@@ -100,6 +101,12 @@ def load_app(path: Path) -> dict:
     _require(RE_REPO.match(app["release_repo"]),
              f"{path.name}: release_repo deve essere 'owner/nome'")
 
+    prefix = app.get("tag_prefix")
+    if prefix is not None:
+        _require(isinstance(prefix, str) and RE_TAG_PREFIX.match(prefix),
+                 f"{path.name}: tag_prefix '{prefix}' deve essere minuscolo, "
+                 f"cifre e '-'")
+
     targets = app.get("targets")
     _require(isinstance(targets, dict) and targets,
              f"{path.name}: serve almeno un [targets.<platform-key>]")
@@ -149,6 +156,16 @@ def load_apps(root: Path) -> dict[str, dict]:
         app = load_app(path)
         _require(app["id"] not in apps, f"app id duplicato: {app['id']}")
         apps[app["id"]] = app
+
+    seen = {}
+    for app_id, app in apps.items():
+        key = (app["release_repo"], app.get("tag_prefix"))
+        other = seen.get(key)
+        _require(other is None,
+                 f"{app_id} e {other} pubblicano nello stesso repo "
+                 f"'{key[0]}' con lo stesso tag_prefix {key[1]!r}: i tag "
+                 f"collidono, dai a ognuna il suo prefisso")
+        seen[key] = app_id
     return apps
 
 
@@ -199,8 +216,16 @@ def normalize_release(payload: dict, app: dict, previous: dict | None = None) ->
                  f"payload: version_code {version_code} non e' maggiore del precedente "
                  f"{previous['version_code']} - l'aggiornamento non sarebbe rilevabile")
 
-    tag = payload.get("tag") or f"v{safe_version(version)}"
+    prefix = app.get("tag_prefix")
+    default_tag = f"v{safe_version(version)}"
+    if prefix:
+        default_tag = f"{prefix}-{default_tag}"
+    tag = payload.get("tag") or default_tag
     _require(isinstance(tag, str) and tag, "payload: tag non valido")
+    if prefix:
+        _require(tag.startswith(f"{prefix}-"),
+                 f"payload: il tag '{tag}' deve iniziare con '{prefix}-', "
+                 f"altrimenti collide con le altre app dello stesso repo")
 
     repo = payload.get("repo") or app["release_repo"]
     _require(RE_REPO.match(repo), f"payload: repo '{repo}' deve essere 'owner/nome'")
