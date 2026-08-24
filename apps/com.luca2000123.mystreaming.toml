@@ -1,0 +1,22 @@
+id = "com.luca2000123.mystreaming"
+title = "MyStreaming"
+description = "Client di streaming per Android, Windows e TV LG webOS."
+icon = "https://raw.githubusercontent.com/Luca2000123/MyStreaming/main/webos/icon.png"
+source_repo = "Luca2000123/MyStreaming"
+release_repo = "Luca2000123/my_streaming-releases"
+
+[targets.android-all]
+ext = "apk"
+install = "apk"
+
+[targets.windows-x86_64]
+ext = "zip"
+install = "zip-relay"
+
+[targets.webos-all]
+ext = "ipk"
+install = "ipk-manual"
+
+[webos]
+type = "web"
+rootRequired = false

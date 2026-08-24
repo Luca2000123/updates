@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://luca2000123.github.io/updates/schema/manifest-v1.json",
+  "title": "Update manifest v1",
+  "type": "object",
+  "required": ["schema", "id", "channel", "version", "version_code", "platforms"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(\\.[a-z0-9][a-z0-9-]*)+$"
+    },
+    "channel": { "enum": ["stable", "beta"] },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(\\+\\d+)?$"
+    },
+    "version_code": { "type": "integer", "minimum": 1 },
+    "pub_date": { "type": ["string", "null"], "format": "date-time" },
+    "notes_url": { "type": ["string", "null"], "format": "uri" },
+    "min_supported_code": { "type": ["integer", "null"], "minimum": 1 },
+    "manifest_url_next": { "type": ["string", "null"], "format": "uri" },
+    "platforms": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z0-9]+-[a-z0-9_]+$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["url", "size", "sha256", "signature", "install"],
+        "additionalProperties": false,
+        "properties": {
+          "url": { "type": "string", "pattern": "^https://" },
+          "size": { "type": "integer", "minimum": 1 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "signature": { "type": ["string", "null"] },
+          "install": {
+            "enum": [
+              "apk",
+              "ipk-manual",
+              "zip-relay",
+              "nsis",
+              "msi",
+              "dmg",
+              "appimage",
+              "deb",
+              "script",
+              "web"
+            ]
+          },
+          "requires": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}
