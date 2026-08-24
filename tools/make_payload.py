@@ -35,6 +35,7 @@ def main() -> int:
     parser.add_argument("--repo", help="owner/nome del repo delle release")
     parser.add_argument("--min-supported-code", type=int)
     parser.add_argument("--pub-date", help="default: adesso in UTC")
+    parser.add_argument("--notes", help="testo del changelog mostrato nel client")
     parser.add_argument("--legacy", action="append", default=[],
                         help="nome di un asset col vecchio schema, ripetibile: non viene "
                              "segnalato come rumore e se manca produce un avviso")
@@ -105,6 +106,8 @@ def main() -> int:
         payload["repo"] = args.repo
     if args.min_supported_code is not None:
         payload["min_supported_code"] = args.min_supported_code
+    if args.notes:
+        payload["notes"] = args.notes
 
     text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     if args.out == "-":

@@ -70,6 +70,13 @@ semver puro (`1.2.3`) va passato a mano con `--version-code`.
 Registrare una release con un `version_code` non maggiore del precedente **fallisce**:
 e' esattamente l'errore che rende un aggiornamento invisibile ai client.
 
+## Changelog nel dialog
+
+`notes` (testo libero, opzionale) finisce cosi' com'e' nel manifest e il client lo mostra
+nel dialog di aggiornamento. Si passa con `--notes` a `make_payload.py`, tipicamente
+alimentato dal body della Release GitHub appena creata (vedi il job `notify-hub` sotto).
+Senza `--notes` il campo resta `null` e il client mostra un testo generico.
+
 La versione webOS e' `<major>.<minor>.<build>`: monotona finche' il numero di build cresce
 sempre, come fa un contatore globale in CI. Pubblicare tre build diverse tutte come `1.0.0`
 (togliendo il `+build` e fermandosi la') significa che il Homebrew Channel non vedra' mai
@@ -155,7 +162,12 @@ Job da aggiungere al workflow di release dell'app:
         run: gh release download "$TAG" --repo "$HUB_REPO" --dir assets --pattern "${APP_ID}-*"
 
       - name: Costruisci il payload
-        run: python make_payload.py --app-id "$APP_ID" --version "$VERSION" --tag "$TAG" --repo "$HUB_REPO" --dir assets --out payload.json
+        env:
+          GH_TOKEN: ${{ secrets.UPDATE_HUB_TOKEN }}
+        run: |
+          NOTES=$(gh release view "$TAG" --repo "$HUB_REPO" --json body -q .body)
+          python make_payload.py --app-id "$APP_ID" --version "$VERSION" --tag "$TAG" \
+            --repo "$HUB_REPO" --dir assets --notes "$NOTES" --out payload.json
 
       - name: Notifica l'hub
         env:

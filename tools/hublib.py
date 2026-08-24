@@ -281,6 +281,7 @@ def normalize_release(payload: dict, app: dict, previous: dict | None = None) ->
         "tag": tag,
         "repo": repo,
         "pub_date": payload.get("pub_date"),
+        "notes": payload.get("notes"),
         "notes_url": payload.get("notes_url") or f"https://github.com/{repo}/releases/tag/{tag}",
         "min_supported_code": min_supported_code,
         "assets": assets,
@@ -328,6 +329,7 @@ def build_manifest(app: dict, release: dict, hub: dict) -> tuple[dict, list[str]
         "version": release["version"],
         "version_code": release["version_code"],
         "pub_date": release.get("pub_date"),
+        "notes": release.get("notes"),
         "notes_url": release.get("notes_url"),
         "min_supported_code": release.get("min_supported_code"),
         "manifest_url_next": (
