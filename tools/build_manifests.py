@@ -53,9 +53,7 @@ def main() -> int:
 
     static_dir = root / "static"
     if static_dir.is_dir():
-        for item in sorted(static_dir.iterdir()):
-            if item.is_file():
-                shutil.copyfile(item, out / item.name)
+        shutil.copytree(static_dir, out, dirs_exist_ok=True)
 
     schema_src = root / "schema" / "manifest-v1.json"
     if schema_src.is_file():
