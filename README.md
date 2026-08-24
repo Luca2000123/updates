@@ -4,13 +4,21 @@
 > per cosa contiene (e cosa non contiene) e per i termini d'uso.
 
 Un solo posto dove si dichiara *cosa esiste* di ogni app, per ogni piattaforma.
-I binari restano nelle GitHub Releases dei repo delle app; qui ci sono solo i manifest,
-pubblicati come file statici su GitHub Pages.
 
 Il punto: **il client non decide piu' quale file gli serve, legge la sua riga nel manifest**.
 Aggiungere un'app o una piattaforma costa un file di configurazione, non codice.
-E nessun client chiama piu' l'API di GitHub, che senza autenticazione e' limitata a
-60 richieste/ora *per indirizzo IP*.
+
+Due backend per manifest+binari, a scelta per-app in `apps/<id>.toml`:
+
+- **GitHub** (default, nessuna sezione `[firebase]`): Release del `release_repo`, manifest
+  su GitHub Pages. Pubblico, nessuna autenticazione — pensato per repo dell'hub pubblici.
+  Il client non chiama comunque l'API di GitHub, limitata senza autenticazione a
+  60 richieste/ora *per indirizzo IP*.
+- **Firebase Storage** (sezione `[firebase]` con `bucket = "..."`): manifest e binari nel
+  bucket Storage dell'app, dietro **autenticazione Firebase** (`request.auth != null` nelle
+  Storage Rules — vedi `storage.rules` nel repo dell'app). Adatto quando il repo dell'hub
+  stesso e' privato e non deve esporre nulla pubblicamente: `com.luca2000123.mystreaming`
+  usa questo backend.
 
 ```
 apps/<app-id>.toml       cosa esiste (scritto a mano, una volta per app)
@@ -120,6 +128,19 @@ rootRequired = false
 La sezione `[webos]` e' obbligatoria se c'e' un target `webos-*`.
 `requires` e' opzionale e viene passato al client cosi' com'e'.
 
+Per usare Firebase Storage invece di GitHub Releases per binari+manifest (repo dell'hub
+privato, niente di pubblico), aggiungi:
+
+```toml
+[firebase]
+bucket = "mystreaming-e09a9.firebasestorage.app"
+```
+
+Con `[firebase]` presente, `asset_url()`/`manifest_url` puntano a
+`https://firebasestorage.googleapis.com/v0/b/<bucket>/o/<path-url-encoded>?alt=media`
+invece che a GitHub; `release_repo`/`tag_prefix` restano validi (servono comunque a evitare
+collisioni di tag) ma non determinano piu' l'URL dei binari.
+
 `tag_prefix` serve quando **piu' app pubblicano nello stesso `release_repo`**: i tag
 diventano `mystreaming-v1.0.0-b67` invece di `v1.0.0-b67`, altrimenti la seconda app che
 rilascia `v1.0.0` trova il tag occupato. Il generatore lo impone: un tag che non comincia col
@@ -128,49 +149,60 @@ la validazione. Se un'app ha il suo repo di release tutto suo, si puo' omettere.
 
 ## Pubblicare una release
 
-Il repo dell'app compila, crea la Release **in questo repo** con i nomi convenzionali, poi
-manda un `repository_dispatch`. L'hub non ricompila e non riscarica niente: si fida degli
-hash calcolati dove i file sono appena stati prodotti.
+Il repo dell'app compila, pubblica i binari (Release GitHub o bucket Firebase, secondo
+`[firebase]` nel descrittore), poi manda un `repository_dispatch`. L'hub non ricompila e
+non riscarica niente: si fida degli hash calcolati dove i file sono appena stati prodotti.
 
-I binari stanno nelle Release di `updates`, i manifest su Pages: lo stesso repo fa da
-magazzino e da indice, quindi serve **un solo secret** (`UPDATE_HUB_TOKEN`) nel repo di
-ogni app, sia per caricare gli asset sia per bussare. Le Release non contano nel limite
-di 1 GB del sito Pages: quello riguarda i file generati in `site/`.
+Serve **un solo secret** nel repo di ogni app, `UPDATE_HUB_TOKEN` (PAT fine-grained sul solo
+repo `updates`, *Contents: read and write*): copre sia il checkout di `tools/` (se il repo
+dell'hub e' privato) sia il dispatch. Col backend Firebase serve *anche* `GCP_SA_KEY` (la
+chiave del service account che scrive sul bucket — vedi "Setup" sotto), nel repo dell'app.
 
-Job da aggiungere al workflow di release dell'app:
+Job da aggiungere al workflow di release dell'app (versione col backend Firebase — con
+GitHub Releases il "Scarica gli asset" diventa `gh release download`, come nella cronologia
+del repo prima di questa nota):
 
 ```yaml
   notify-hub:
-    needs: [build-and-release, build-windows, build-webos]
+    needs: [prepare, build-android, build-windows, build-webos]
     runs-on: ubuntu-latest
     env:
       APP_ID: com.luca2000123.mystreaming
+      BUCKET: mystreaming-e09a9.firebasestorage.app
       HUB_REPO: Luca2000123/updates
-      TAG: ${{ needs.build-and-release.outputs.tag }}
-      VERSION: ${{ needs.build-and-release.outputs.version }}
+      TAG: ${{ needs.prepare.outputs.tag }}
+      VERSION: ${{ needs.prepare.outputs.version }}
     steps:
+      # Repo updates privato: niente raw.githubusercontent.com senza token.
+      - name: Checkout degli strumenti dell'hub
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.HUB_REPO }}
+          token: ${{ secrets.UPDATE_HUB_TOKEN }}
+          path: hub-tools
+
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
-      - name: Prendi gli strumenti dell'hub
-        run: |
-          BASE="https://raw.githubusercontent.com/${HUB_REPO}/main/tools"
-          curl -fsSL -o hublib.py "$BASE/hublib.py"
-          curl -fsSL -o make_payload.py "$BASE/make_payload.py"
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Scarica gli asset appena pubblicati
-        env:
-          GH_TOKEN: ${{ secrets.UPDATE_HUB_TOKEN }}
-        run: gh release download "$TAG" --repo "$HUB_REPO" --dir assets --pattern "${APP_ID}-*"
+        run: |
+          mkdir -p assets
+          gcloud storage cp "gs://${BUCKET}/releases/${APP_ID}/${TAG}/*" ./assets/
 
+      # Le note vengono da un output del job che ha fatto il bump di versione
+      # (il messaggio dell'ultimo commit "vero"), non da un body di Release:
+      # senza Release non c'e' piu' nessun body da rileggere.
       - name: Costruisci il payload
         env:
-          GH_TOKEN: ${{ secrets.UPDATE_HUB_TOKEN }}
+          NOTES: ${{ needs.prepare.outputs.notes }}
         run: |
-          NOTES=$(gh release view "$TAG" --repo "$HUB_REPO" --json body -q .body)
-          python make_payload.py --app-id "$APP_ID" --version "$VERSION" --tag "$TAG" \
-            --repo "$HUB_REPO" --dir assets --notes "$NOTES" --out payload.json
+          python hub-tools/tools/make_payload.py --app-id "$APP_ID" --version "$VERSION" \
+            --tag "$TAG" --dir assets --notes "$NOTES" --out payload.json
 
       - name: Notifica l'hub
         env:
@@ -181,7 +213,7 @@ Job da aggiungere al workflow di release dell'app:
 ```
 
 Poi `publish.yml` valida e committa `releases/**`, e il push fa ripartire `build-site.yml`
-che rigenera e ridistribuisce il sito.
+che rigenera i manifest e li carica sul bucket (o su Pages, backend GitHub).
 
 Per rimediare a una release sbagliata: lanciare `publish` a mano da Actions, incollando il
 payload e spuntando `allow_rollback`.
@@ -227,13 +259,28 @@ ogni build che devono restare e avvisa se sparivano.
 
 ## Setup, una volta sola
 
+Backend GitHub (repo dell'hub pubblico):
 - **Pages**: Settings → Pages → Source: **GitHub Actions**. Il primo `build-site` pubblica.
 - **Token**: un PAT fine-grained sul solo repo `updates`, permesso *Contents: read and write*,
-  salvato come secret `UPDATE_HUB_TOKEN` nel repo di ogni app. Lo stesso permesso copre le tre
-  cose che il workflow di un'app fa qui: creare la Release, caricare gli asset, mandare il
-  dispatch. Se le app finiscono in una organizzazione, diventa un organization secret e si
-  ruota in un posto solo.
+  salvato come secret `UPDATE_HUB_TOKEN` nel repo di ogni app. Copre creare la Release,
+  caricare gli asset, mandare il dispatch.
 - `base_url` in `hub.toml` deve combaciare con l'URL reale di Pages.
+
+Backend Firebase (bucket per-app, repo dell'hub anche privato):
+- **Attivare Storage una volta** sul progetto Firebase dell'app: Console → Storage →
+  "Get started" (nessuna API automatizza questo primo click; serve anche il piano
+  **Blaze**, pay-as-you-go — al volume di un'app personale resta nel livello sempre
+  gratuito incluso, ma va collegato un metodo di pagamento).
+- **Regole**: `storage.rules` nel repo dell'app (`allow read: if request.auth != null;`,
+  stesso pattern di `firestore.rules`), deploy con `firebase deploy --only storage`.
+- **Service account**, permesso *Storage Object Admin* **sul solo bucket** (non sul
+  progetto): `gcloud iam service-accounts create` + `gcloud storage buckets
+  add-iam-policy-binding gs://<bucket> --role=roles/storage.objectAdmin`, poi
+  `gcloud iam service-accounts keys create` per la chiave JSON. Va salvata come secret
+  `GCP_SA_KEY` **sia** nel repo dell'app (i job di build ci caricano i binari) **sia**
+  in questo repo (`build-site.yml` ci carica i manifest).
+- `UPDATE_HUB_TOKEN` serve comunque, per il checkout di `tools/` (repo privato) e il
+  dispatch.
 
 ## Comandi locali
 
@@ -263,3 +310,11 @@ va committato.
   `latest/download` non si usa mai (l'URL nel manifest ha il tag esatto).
 - **Registrare due volte lo stesso `version_code`** rende il rilascio invisibile ai client: il
   generatore lo rifiuta invece di pubblicarlo.
+- **Backend Firebase: l'anonimo non e' un muro.** Le Storage Rules con
+  `request.auth != null` bloccano gli scraper occasionali e chi non ha mai visto l'app, ma
+  l'API key del progetto (in `google-services.json`) non e' un segreto e chi ha l'APK puo'
+  ottenere un token valido con `signInAnonymously()`. E' privacy/riduzione dell'esposizione
+  pubblica, non un muro impenetrabile — per quello serve App Check (non implementato qui).
+- **webOS col backend Firebase perde la scoperta automatica**: il Homebrew Channel non puo'
+  autenticarsi, quindi non vede aggiornamenti da solo. L'app notifica comunque in-app
+  (lei si autentica), ma l'installazione va fatta a mano (`ares-install` sull'ipk scaricato).

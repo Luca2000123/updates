@@ -1,10 +1,13 @@
 id = "com.luca2000123.mystreaming"
 title = "MyStreaming"
 description = "Client di streaming per Android, Windows e TV LG webOS."
-icon = "https://luca2000123.github.io/updates/icons/com.luca2000123.mystreaming.png"
+icon = "https://firebasestorage.googleapis.com/v0/b/mystreaming-e09a9.firebasestorage.app/o/icons%2Fcom.luca2000123.mystreaming.png?alt=media"
 source_repo = "Luca2000123/MyStreaming"
 release_repo = "Luca2000123/updates"
 tag_prefix = "mystreaming"
+
+[firebase]
+bucket = "mystreaming-e09a9.firebasestorage.app"
 
 [targets.android-all]
 ext = "apk"

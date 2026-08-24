@@ -477,6 +477,56 @@ class TestTransizioneLegacy(HubFixture):
         self.assertTrue(url.endswith("-1.0.0-b66-android-all.apk"))
 
 
+class TestFirebaseBackend(HubFixture):
+    def con_firebase(self, bucket="myapp-e09a9.firebasestorage.app"):
+        path = self.root / "apps" / f"{APP_ID}.toml"
+        text = path.read_text(encoding="utf-8")
+        path.write_text(
+            text + f'\n[firebase]\nbucket = "{bucket}"\n',
+            encoding="utf-8",
+        )
+
+    def test_bucket_invalido_rifiutato(self):
+        self.con_firebase(bucket="Not Valid Bucket!")
+        with self.assertRaises(HubError):
+            self.app()
+
+    def test_firebase_storage_url_incodifica_il_path(self):
+        url = hublib.firebase_storage_url("myapp.firebasestorage.app", "v1/apps/a.b/stable.json")
+        self.assertEqual(
+            url,
+            "https://firebasestorage.googleapis.com/v0/b/myapp.firebasestorage.app/"
+            "o/v1%2Fapps%2Fa.b%2Fstable.json?alt=media",
+        )
+
+    def test_asset_url_usa_firebase_quando_configurato(self):
+        self.con_firebase()
+        self.record(payload())
+        files, _, _ = self.build()
+        android = files[f"v1/apps/{APP_ID}/stable.json"]["platforms"]["android-all"]
+        self.assertTrue(android["url"].startswith(
+            "https://firebasestorage.googleapis.com/v0/b/"
+            "myapp-e09a9.firebasestorage.app/o/releases%2F"
+        ))
+        self.assertIn("alt=media", android["url"])
+
+    def test_senza_firebase_resta_su_github(self):
+        self.record(payload())
+        files, _, _ = self.build()
+        android = files[f"v1/apps/{APP_ID}/stable.json"]["platforms"]["android-all"]
+        self.assertTrue(android["url"].startswith("https://github.com/"))
+
+    def test_manifest_url_nell_indice_usa_firebase(self):
+        self.con_firebase()
+        self.record(payload())
+        files, _, _ = self.build()
+        entry = files["v1/index.json"]["apps"][0]["channels"]["stable"]
+        self.assertTrue(entry["manifest_url"].startswith(
+            "https://firebasestorage.googleapis.com/v0/b/"
+            "myapp-e09a9.firebasestorage.app/o/v1%2Fapps%2F"
+        ))
+
+
 class TestTagPrefix(HubFixture):
     def con_prefix(self):
         path = self.root / "apps" / f"{APP_ID}.toml"

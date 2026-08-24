@@ -4,6 +4,7 @@ import json
 import re
 import tomllib
 from pathlib import Path
+from urllib.parse import quote
 
 SCHEMA_VERSION = 1
 CHANNELS = ("stable", "beta")
@@ -28,6 +29,7 @@ RE_SHA256 = re.compile(r"^[0-9a-f]{64}$")
 RE_REPO = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 RE_EXT = re.compile(r"^[a-z0-9]{2,8}$")
 RE_TAG_PREFIX = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+RE_FIREBASE_BUCKET = re.compile(r"^[a-z0-9][a-z0-9_.-]*$")
 
 
 class HubError(Exception):
@@ -106,6 +108,13 @@ def load_app(path: Path) -> dict:
         _require(isinstance(prefix, str) and RE_TAG_PREFIX.match(prefix),
                  f"{path.name}: tag_prefix '{prefix}' deve essere minuscolo, "
                  f"cifre e '-'")
+
+    firebase = app.get("firebase")
+    if firebase is not None:
+        _require(isinstance(firebase, dict), f"{path.name}: [firebase] deve essere una tabella")
+        bucket = firebase.get("bucket")
+        _require(isinstance(bucket, str) and RE_FIREBASE_BUCKET.match(bucket),
+                 f"{path.name}: firebase.bucket '{bucket}' non valido")
 
     targets = app.get("targets")
     _require(isinstance(targets, dict) and targets,
@@ -190,7 +199,15 @@ def expected_filename(app_id: str, version: str, platform: str, ext: str) -> str
     return f"{app_id}-{safe_version(version)}-{platform}.{ext}"
 
 
-def asset_url(repo: str, tag: str, filename: str) -> str:
+def firebase_storage_url(bucket: str, path: str) -> str:
+    return f"https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{quote(path, safe='')}?alt=media"
+
+
+def asset_url(app: dict, repo: str, tag: str, filename: str) -> str:
+    firebase = app.get("firebase")
+    if firebase:
+        path = f"releases/{app['id']}/{tag}/{filename}"
+        return firebase_storage_url(firebase["bucket"], path)
     return f"https://github.com/{repo}/releases/download/{tag}/{filename}"
 
 
@@ -302,7 +319,7 @@ def build_manifest(app: dict, release: dict, hub: dict) -> tuple[dict, list[str]
             )
             continue
         entry = {
-            "url": asset_url(release["repo"], release["tag"], asset["filename"]),
+            "url": asset_url(app, release["repo"], release["tag"], asset["filename"]),
             "size": asset["size"],
             "sha256": asset["sha256"],
             "signature": asset.get("signature"),
@@ -371,15 +388,21 @@ def build_index(apps: dict, manifests: dict, hub: dict) -> dict:
     entries = []
     for app_id in sorted(manifests):
         app = apps[app_id]
+        firebase = app.get("firebase")
         channels = {}
         for channel in CHANNELS:
             manifest = manifests[app_id].get(channel)
             if manifest is None:
                 continue
+            if firebase:
+                manifest_url = firebase_storage_url(
+                    firebase["bucket"], f"v1/apps/{app_id}/{channel}.json")
+            else:
+                manifest_url = f"{base}/v1/apps/{app_id}/{channel}.json"
             channels[channel] = {
                 "version": manifest["version"],
                 "version_code": manifest["version_code"],
-                "manifest_url": f"{base}/v1/apps/{app_id}/{channel}.json",
+                "manifest_url": manifest_url,
                 "platforms": sorted(manifest["platforms"]),
             }
         entry = {
