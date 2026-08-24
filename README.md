@@ -1,5 +1,8 @@
 # Update hub
 
+> Repository personale, non un servizio pubblico: vedi [`LEGAL.md`](LEGAL.md)
+> per cosa contiene (e cosa non contiene) e per i termini d'uso.
+
 Un solo posto dove si dichiara *cosa esiste* di ogni app, per ogni piattaforma.
 I binari restano nelle GitHub Releases dei repo delle app; qui ci sono solo i manifest,
 pubblicati come file statici su GitHub Pages.
