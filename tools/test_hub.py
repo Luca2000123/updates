@@ -40,6 +40,23 @@ type = "web"
 rootRequired = false
 """
 
+ANDROID_TARGET = """[targets.android-all]
+ext = "apk"
+install = "apk"
+"""
+
+ANDROID_TARGET_LEGACY = """[targets.android-all]
+ext = "apk"
+install = "apk"
+legacy_name = "vecchio.apk"
+"""
+
+ANDROID_TARGET_LEGACY_BAD = """[targets.android-all]
+ext = "apk"
+install = "apk"
+legacy_name = "sotto/vecchio.apk"
+"""
+
 SHA = {
     "android-all": "1" * 64,
     "windows-x86_64": "2" * 64,
@@ -400,10 +417,58 @@ class TestMakePayload(HubFixture):
         self.assertEqual([a["platform"] for a in data["assets"]], ["android-all"])
         self.assertIn("my_streaming.apk", proc.stderr)
 
+    def test_legacy_non_e_rumore_e_se_manca_avvisa(self):
+        names = {
+            hublib.expected_filename(APP_ID, "1.0.0+66", "android-all", "apk"): b"x",
+            "my_streaming.apk": b"y",
+        }
+        proc = self.run_tool("--version", "1.0.0+66", "--legacy", "my_streaming.apk",
+                             "--legacy", "my_streaming-windows-x64.zip", files=names)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertNotIn("ignorato 'my_streaming.apk'", proc.stderr)
+        self.assertIn("my_streaming-windows-x64.zip", proc.stderr)
+        self.assertIn("non si aggiorneranno", proc.stderr)
+        data = json.loads(proc.stdout)
+        self.assertEqual([a["platform"] for a in data["assets"]], ["android-all"])
+
     def test_fails_when_nothing_matches(self):
         proc = self.run_tool("--version", "9.9.9+99", files={"altro.apk": b"x"})
         self.assertEqual(proc.returncode, 1)
         self.assertIn("nessun asset", proc.stderr)
+
+
+class TestTransizioneLegacy(HubFixture):
+    def scrivi_toml(self, blocco):
+        assert ANDROID_TARGET in APP_TOML
+        path = self.root / "apps" / f"{APP_ID}.toml"
+        path.write_text(APP_TOML.replace(ANDROID_TARGET, blocco), encoding="utf-8")
+
+    def test_legacy_name_invalido_rifiutato(self):
+        self.scrivi_toml(ANDROID_TARGET_LEGACY_BAD)
+        with self.assertRaises(HubError):
+            self.app()
+
+    def test_nota_di_transizione(self):
+        self.scrivi_toml(ANDROID_TARGET_LEGACY)
+        self.record(payload())
+        files, warnings, notes = self.build()
+        self.assertEqual(warnings, [])
+        self.assertTrue(any("vecchio.apk" in n for n in notes))
+
+    def test_manifest_ignora_il_legacy(self):
+        self.scrivi_toml(ANDROID_TARGET_LEGACY)
+        self.record(payload())
+        files, _, _ = self.build()
+        android = files[f"v1/apps/{APP_ID}/stable.json"]["platforms"]["android-all"]
+        self.assertNotIn("legacy_name", android)
+        self.assertTrue(android["url"].endswith("dev.local.testapp-1.0.0-b66-android-all.apk"))
+
+    def test_tag_legacy_col_piu_resta_nel_url(self):
+        self.record(payload(tag="v1.0.0+66"))
+        files, _, _ = self.build()
+        url = files[f"v1/apps/{APP_ID}/stable.json"]["platforms"]["android-all"]["url"]
+        self.assertIn("/download/v1.0.0+66/", url)
+        self.assertTrue(url.endswith("-1.0.0-b66-android-all.apk"))
 
 
 if __name__ == "__main__":

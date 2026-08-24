@@ -120,6 +120,11 @@ def load_app(path: Path) -> dict:
         for rk, rv in requires.items():
             _require(isinstance(rv, str),
                      f"{path.name}/{platform}: requires.{rk} deve essere una stringa")
+        legacy = target.get("legacy_name")
+        if legacy is not None:
+            _require(isinstance(legacy, str) and legacy and "/" not in legacy,
+                     f"{path.name}/{platform}: legacy_name deve essere un nome di file")
+
         unknown = set(target) - {"ext", "install", "requires", "legacy_name"}
         _require(not unknown,
                  f"{path.name}/{platform}: chiavi non riconosciute {sorted(unknown)}")
@@ -372,6 +377,16 @@ def build_site(root: Path) -> tuple[dict[str, dict], list[str], list[str]]:
     notes = []
 
     for app_id, app in apps.items():
+        legacy = sorted(
+            f"{platform} -> {target['legacy_name']}"
+            for platform, target in app["targets"].items()
+            if target.get("legacy_name")
+        )
+        if legacy:
+            notes.append(
+                f"{app_id}: transizione attiva, ogni release deve contenere ancora "
+                f"gli asset col nome vecchio ({'; '.join(legacy)})"
+            )
         releases = load_releases(root, app_id)
         if not releases:
             notes.append(f"{app_id}: nessuna release registrata, esclusa dal catalogo")
