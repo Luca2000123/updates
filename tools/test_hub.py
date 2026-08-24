@@ -344,6 +344,12 @@ class TestBuildSite(HubFixture):
             f"https://updates.example.com/v1/apps/{APP_ID}/stable.json",
         )
 
+    def test_notes_propagated(self):
+        self.record(payload(notes="- fix scroll TV\n- fix crash avvio"))
+        files, _, _ = self.build()
+        manifest = files[f"v1/apps/{APP_ID}/stable.json"]
+        self.assertEqual(manifest["notes"], "- fix scroll TV\n- fix crash avvio")
+
     def test_output_is_deterministic(self):
         self.record(payload())
         first, _, _ = self.build()

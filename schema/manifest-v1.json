@@ -18,6 +18,7 @@
     },
     "version_code": { "type": "integer", "minimum": 1 },
     "pub_date": { "type": ["string", "null"], "format": "date-time" },
+    "notes": { "type": ["string", "null"] },
     "notes_url": { "type": ["string", "null"], "format": "uri" },
     "min_supported_code": { "type": ["integer", "null"], "minimum": 1 },
     "manifest_url_next": { "type": ["string", "null"], "format": "uri" },
