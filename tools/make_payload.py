@@ -35,6 +35,9 @@ def main() -> int:
     parser.add_argument("--repo", help="owner/nome del repo delle release")
     parser.add_argument("--min-supported-code", type=int)
     parser.add_argument("--pub-date", help="default: adesso in UTC")
+    parser.add_argument("--legacy", action="append", default=[],
+                        help="nome di un asset col vecchio schema, ripetibile: non viene "
+                             "segnalato come rumore e se manca produce un avviso")
     parser.add_argument("--out", default="-", help="file di output, - per stdout")
     args = parser.parse_args()
 
@@ -49,12 +52,17 @@ def main() -> int:
         print(f"errore: {directory} non e' una directory", file=sys.stderr)
         return 1
 
+    legacy_wanted = set(args.legacy or [])
+    legacy_found = set()
     assets = []
     ignored = []
     for path in sorted(directory.iterdir()):
         if not path.is_file():
             continue
         name = path.name
+        if name in legacy_wanted:
+            legacy_found.add(name)
+            continue
         if not name.startswith(prefix) or "." not in name[len(prefix):]:
             ignored.append(name)
             continue
@@ -73,6 +81,10 @@ def main() -> int:
 
     for name in ignored:
         print(f"avviso: ignorato '{name}': non segue '{prefix}<platform>.<ext>'", file=sys.stderr)
+
+    for name in sorted(legacy_wanted - legacy_found):
+        print(f"avviso: asset legacy '{name}' assente dalla release: "
+              f"le installazioni vecchie non si aggiorneranno", file=sys.stderr)
 
     if not assets:
         print(f"errore: nessun asset con prefisso '{prefix}' in {directory}", file=sys.stderr)

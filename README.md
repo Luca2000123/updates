@@ -144,7 +144,7 @@ Job da aggiungere al workflow di release dell'app:
         run: gh release download "$TAG" --repo "$RELEASES_REPO" --dir assets --pattern "${APP_ID}-*"
 
       - name: Costruisci il payload
-        run: python make_payload.py --app-id "$APP_ID" --version "$VERSION" --tag "$TAG" --repo "$RELEASES_REPO" --dir assets --out payload.json
+        run: python make_payload.py --app-id "$APP_ID" --version "$VERSION" --tag "$TAG" --repo "$RELEASES_REPO" --dir assets --out payload.json --legacy my_streaming.apk --legacy my_streaming-windows-x64.zip --legacy my_streaming.ipk
 
       - name: Notifica l'hub
         env:
@@ -159,6 +159,31 @@ che rigenera e ridistribuisce il sito.
 
 Per rimediare a una release sbagliata: lanciare `publish` a mano da Actions, incollando il
 payload e spuntando `allow_rollback`.
+
+## Transizione dal vecchio updater
+
+Le versioni gia' installate sui telefoni e sulle TV **non si possono cambiare**. Il loro updater
+non legge gli URL dalla risposta dell'API: li ha compilati dentro, nella forma
+`releases/latest/download/<nome-fisso>`. Quindi durante la transizione ogni release deve
+soddisfare tre vincoli, o quelle installazioni restano ferme per sempre:
+
+1. **Gli asset col nome vecchio devono continuare a esistere**, in aggiunta a quelli nuovi.
+   Si dichiarano nel descrittore con `legacy_name` e il generatore lo ricorda a ogni build.
+2. **Il tag deve restare nella forma `v<major>.<minor>.<patch>+<build>`.** Il vecchio parser
+   ripulisce i caratteri non numerici, quindi leggerebbe `v1.0.0-b68` come versione `1.0.68`:
+   piu' alta della locale `1.0.0+68` a ogni avvio, cioe' un aggiornamento proposto in loop
+   e mai risolto. Il tag va passato esplicito con `--tag`; un `+` nel path di un URL di
+   download di GitHub e' legale e funziona (verificato: risponde 206 sia `+` sia `%2B`).
+3. **La release deve restare marcata "latest"**, perche' e' quello che `latest/download`
+   risolve.
+
+Il client nuovo, invece, tiene due sorgenti: prima il manifest dell'hub, e se non risponde
+ricade sul vecchio giro dell'API. Cosi' l'affidabilita' non peggiora mentre Pages diventa la
+strada principale.
+
+La transizione si chiude quando i download dei nomi legacy si azzerano: si togliero'
+`legacy_name` dal descrittore, `--legacy` dal workflow, e il tag potra' tornare alla forma
+normalizzata `v1.0.0-b70`.
 
 ## Cosa fa il client con `install`
 
