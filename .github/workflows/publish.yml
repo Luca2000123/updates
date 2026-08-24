@@ -1,0 +1,83 @@
+name: publish
+
+on:
+  repository_dispatch:
+    types: [release-published]
+  workflow_dispatch:
+    inputs:
+      payload:
+        description: JSON del payload di release
+        required: true
+      allow_rollback:
+        description: Permetti un version_code non crescente
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Payload da repository_dispatch
+        if: github.event_name == 'repository_dispatch'
+        env:
+          PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+        run: printf '%s' "$PAYLOAD" > payload.json
+
+      - name: Payload da workflow_dispatch
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          PAYLOAD: ${{ inputs.payload }}
+        run: printf '%s' "$PAYLOAD" > payload.json
+
+      - name: Metadati
+        id: meta
+        run: |
+          echo "app=$(jq -r '.app_id' payload.json)" >> "$GITHUB_OUTPUT"
+          echo "version=$(jq -r '.version' payload.json)" >> "$GITHUB_OUTPUT"
+          echo "channel=$(jq -r '.channel // "stable"' payload.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Registra la release
+        run: |
+          if [ "${{ inputs.allow_rollback }}" = "true" ]; then
+            python tools/record_release.py --payload payload.json --allow-rollback
+          else
+            python tools/record_release.py --payload payload.json
+          fi
+
+      - name: Verifica che il sito resti generabile
+        run: python tools/build_manifests.py --check --strict
+
+      - name: Commit
+        env:
+          APP: ${{ steps.meta.outputs.app }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          CHANNEL: ${{ steps.meta.outputs.channel }}
+        run: |
+          rm -f payload.json
+          if git diff --quiet -- releases; then
+            echo "nessuna modifica da committare"
+            exit 0
+          fi
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add releases
+          git commit -m "release: $APP $VERSION ($CHANNEL)"
+          for attempt in 1 2 3; do
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push && exit 0
+            echo "push fallito, tentativo $attempt"
+            sleep 5
+          done
+          exit 1
