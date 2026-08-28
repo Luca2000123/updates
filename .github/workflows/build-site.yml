@@ -47,24 +47,3 @@ jobs:
 
       - name: Valida i manifest contro lo schema
         run: python tools/validate_site.py --site site
-
-      - name: Autenticazione Google Cloud
-        if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      # Repo privato, niente Pages: i manifest e le icone vanno dritti sul
-      # bucket Firebase Storage dell'app (dietro autenticazione, vedi
-      # storage.rules in MyStreaming). Un solo bucket per ora -- l'unica app
-      # con [firebase] configurato e' com.luca2000123.mystreaming; quando
-      # un'altra ne avra' uno proprio, questo step va reso per-app invece
-      # che fisso su un bucket solo.
-      - name: Carica manifest e icone sul bucket
-        if: github.event_name != 'pull_request'
-        run: |
-          BUCKET=mystreaming-e09a9.firebasestorage.app
-          gcloud storage rsync site/v1 "gs://${BUCKET}/v1" \
-            --recursive --delete-unmatched-destination-objects
-          gcloud storage rsync static/icons "gs://${BUCKET}/icons" \
-            --recursive --delete-unmatched-destination-objects
