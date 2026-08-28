@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: publish
@@ -65,6 +66,7 @@ jobs:
           APP: ${{ steps.meta.outputs.app }}
           VERSION: ${{ steps.meta.outputs.version }}
           CHANNEL: ${{ steps.meta.outputs.channel }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           rm -f payload.json
           git add releases
@@ -76,7 +78,13 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m "release: $APP $VERSION ($CHANNEL)"
           for attempt in 1 2 3; do
-            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push && exit 0
+            if git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push; then
+              # Un push fatto col GITHUB_TOKEN non fa scattare l'on:push di
+              # build-site (protezione anti-loop di GitHub Actions): lo si
+              # attiva esplicitamente qui.
+              gh workflow run build-site.yml --repo "${GITHUB_REPOSITORY}" --ref "${GITHUB_REF_NAME}"
+              exit 0
+            fi
             echo "push fallito, tentativo $attempt"
             sleep 5
           done

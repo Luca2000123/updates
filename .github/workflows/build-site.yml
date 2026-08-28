@@ -24,8 +24,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: build-site
-  cancel-in-progress: true
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -47,3 +47,25 @@ jobs:
 
       - name: Valida i manifest contro lo schema
         run: python tools/validate_site.py --site site
+
+      # Solo push/workflow_dispatch pubblicano: una PR deve solo validare.
+      - name: Prepara l'artifact per Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Pubblica su GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
