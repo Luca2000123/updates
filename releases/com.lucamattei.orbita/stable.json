@@ -2,20 +2,20 @@
   "app_id": "com.lucamattei.orbita",
   "assets": {
     "android-all": {
-      "filename": "com.lucamattei.orbita-1.0.0-b4-android-all.apk",
-      "sha256": "ca122f4c2514335fe582791239f086c59c2a735ccbb1f577f06b20bdb59a6fd0",
+      "filename": "com.lucamattei.orbita-1.0.0-b5-android-all.apk",
+      "sha256": "92be72f859cb64b08c9e1ae3c7905086786c0bb72c09be0a045968d02bf49a17",
       "signature": null,
       "size": 62956781
     }
   },
   "channel": "stable",
   "min_supported_code": null,
-  "notes": "Merge pull request #2 from Luca2000123/Develop\n\nDevelop",
-  "notes_url": "https://github.com/Luca2000123/updates/releases/tag/orbita-v1.0.0-b4",
-  "pub_date": "2026-08-28T16:01:02Z",
+  "notes": "Merge pull request #3 from Luca2000123/Develop\n\n.",
+  "notes_url": "https://github.com/Luca2000123/updates/releases/tag/orbita-v1.0.0-b5",
+  "pub_date": "2026-08-28T16:33:30Z",
   "repo": "Luca2000123/updates",
   "schema": 1,
-  "tag": "orbita-v1.0.0-b4",
-  "version": "1.0.0+4",
-  "version_code": 4
+  "tag": "orbita-v1.0.0-b5",
+  "version": "1.0.0+5",
+  "version_code": 5
 }
