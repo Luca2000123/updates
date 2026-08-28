@@ -1,0 +1,11 @@
+id = "com.lucamattei.orbita"
+title = "Orbita"
+description = "App di navigazione personale — mappa, percorsi, traffico live, autovelox."
+icon = "https://luca2000123.github.io/updates/icons/com.lucamattei.orbita.png"
+source_repo = "Luca2000123/Orbita-"
+release_repo = "Luca2000123/updates"
+tag_prefix = "orbita"
+
+[targets.android-all]
+ext = "apk"
+install = "apk"
