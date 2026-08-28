@@ -67,13 +67,13 @@ jobs:
           CHANNEL: ${{ steps.meta.outputs.channel }}
         run: |
           rm -f payload.json
-          if git diff --quiet -- releases; then
+          git add releases
+          if git diff --cached --quiet -- releases; then
             echo "nessuna modifica da committare"
             exit 0
           fi
           git config user.name  'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add releases
           git commit -m "release: $APP $VERSION ($CHANNEL)"
           for attempt in 1 2 3; do
             git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push && exit 0
