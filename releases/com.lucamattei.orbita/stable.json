@@ -2,20 +2,20 @@
   "app_id": "com.lucamattei.orbita",
   "assets": {
     "android-all": {
-      "filename": "com.lucamattei.orbita-1.0.0-b7-android-all.apk",
-      "sha256": "b4cb6c5eea2f88c94e54a5a7c7916a7ea3cb7a5daf7b06e0561a9168c56afd57",
+      "filename": "com.lucamattei.orbita-1.0.0-b8-android-all.apk",
+      "sha256": "569feb6bdb16280c12148956626ea81527bce9ecc754bfda5f7a02ab4a0130b5",
       "signature": null,
-      "size": 62956809
+      "size": 63408117
     }
   },
   "channel": "stable",
   "min_supported_code": null,
-  "notes": "Merge pull request #6 from Luca2000123/Develop\n\n.",
-  "notes_url": "https://github.com/Luca2000123/updates/releases/tag/orbita-v1.0.0-b7",
-  "pub_date": "2026-08-28T17:55:58Z",
+  "notes": "Merge pull request #7 from Luca2000123/Develop\n\nRedesign UI navigazione (design tokens, dark mode, Manrope offline)",
+  "notes_url": "https://github.com/Luca2000123/updates/releases/tag/orbita-v1.0.0-b8",
+  "pub_date": "2026-09-13T21:59:42Z",
   "repo": "Luca2000123/updates",
   "schema": 1,
-  "tag": "orbita-v1.0.0-b7",
-  "version": "1.0.0+7",
-  "version_code": 7
+  "tag": "orbita-v1.0.0-b8",
+  "version": "1.0.0+8",
+  "version_code": 8
 }
