@@ -2,20 +2,20 @@
   "app_id": "com.luca.orbita",
   "assets": {
     "android-all": {
-      "filename": "com.luca.orbita-1.0.0-b30-android-all.apk",
-      "sha256": "1324d25b1b17bd80dee70e50aede9d0d894f28016f1d63af211f0e80249ffe33",
+      "filename": "com.luca.orbita-1.0.0-b31-android-all.apk",
+      "sha256": "025c0c00e35705b42c6084be8365049fd42d8d607ecca7d845b649fe6d7fa62d",
       "signature": null,
-      "size": 69893703
+      "size": 69959267
     }
   },
   "channel": "stable",
   "min_supported_code": null,
-  "notes": "Merge pull request #28 from Luca2000123/perf/ztl-avoid-lazy\n\nperf(routing): evita le ZTL in due fasi",
-  "notes_url": "https://github.com/Luca2000123/updates/releases/tag/orbita-v1.0.0-b30",
-  "pub_date": "2026-11-22T18:01:33Z",
+  "notes": "Merge pull request #29 from Luca2000123/feat/ztl-alternative-popup\n\nfeat(routing): proposta di percorso alternativo senza ZTL mentre si guida",
+  "notes_url": "https://github.com/Luca2000123/updates/releases/tag/orbita-v1.0.0-b31",
+  "pub_date": "2026-11-22T19:00:49Z",
   "repo": "Luca2000123/updates",
   "schema": 1,
-  "tag": "orbita-v1.0.0-b30",
-  "version": "1.0.0+30",
-  "version_code": 30
+  "tag": "orbita-v1.0.0-b31",
+  "version": "1.0.0+31",
+  "version_code": 31
 }
