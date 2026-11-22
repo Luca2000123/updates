@@ -2,20 +2,20 @@
   "app_id": "com.luca.orbita",
   "assets": {
     "android-all": {
-      "filename": "com.luca.orbita-1.0.0-b26-android-all.apk",
-      "sha256": "8ec44f34c01edbe33ef0526cb665cbbf4a13fd6b8fac5270f2f2b6ec4f97544a",
+      "filename": "com.luca.orbita-1.0.0-b27-android-all.apk",
+      "sha256": "1f67f89686551ffd5ee404e31696b2cf715404820712de8fe5fa836b6b9a7338",
       "signature": null,
-      "size": 69071971
+      "size": 69871107
     }
   },
   "channel": "stable",
   "min_supported_code": null,
-  "notes": "Merge pull request #24 from Luca2000123/feat/ztl-avoidance\n\nfeat(routing): evita le ZTL, avviso e 'Avvia comunque'",
-  "notes_url": "https://github.com/Luca2000123/updates/releases/tag/orbita-v1.0.0-b26",
-  "pub_date": "2026-11-22T16:26:25Z",
+  "notes": "Merge pull request #25 from Luca2000123/fix/live-data-cache\n\nfix: gruppo dopo il riavvio, cache dei dati live, istantanea ZTL",
+  "notes_url": "https://github.com/Luca2000123/updates/releases/tag/orbita-v1.0.0-b27",
+  "pub_date": "2026-11-22T17:05:26Z",
   "repo": "Luca2000123/updates",
   "schema": 1,
-  "tag": "orbita-v1.0.0-b26",
-  "version": "1.0.0+26",
-  "version_code": 26
+  "tag": "orbita-v1.0.0-b27",
+  "version": "1.0.0+27",
+  "version_code": 27
 }
