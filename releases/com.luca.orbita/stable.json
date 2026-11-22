@@ -2,20 +2,20 @@
   "app_id": "com.luca.orbita",
   "assets": {
     "android-all": {
-      "filename": "com.luca.orbita-1.0.0-b27-android-all.apk",
-      "sha256": "1f67f89686551ffd5ee404e31696b2cf715404820712de8fe5fa836b6b9a7338",
+      "filename": "com.luca.orbita-1.0.0-b28-android-all.apk",
+      "sha256": "14a44390692a41a246fd2faf90339d0df0cf4b898705d4af97a2172ba5f78b3c",
       "signature": null,
-      "size": 69871107
+      "size": 69860935
     }
   },
   "channel": "stable",
   "min_supported_code": null,
-  "notes": "Merge pull request #25 from Luca2000123/fix/live-data-cache\n\nfix: gruppo dopo il riavvio, cache dei dati live, istantanea ZTL",
-  "notes_url": "https://github.com/Luca2000123/updates/releases/tag/orbita-v1.0.0-b27",
-  "pub_date": "2026-11-22T17:05:26Z",
+  "notes": "Merge pull request #26 from Luca2000123/fix/ztl-rings\n\nfix(data): ZTL OSM con pezzi di contorno uniti in anelli chiusi",
+  "notes_url": "https://github.com/Luca2000123/updates/releases/tag/orbita-v1.0.0-b28",
+  "pub_date": "2026-11-22T17:15:12Z",
   "repo": "Luca2000123/updates",
   "schema": 1,
-  "tag": "orbita-v1.0.0-b27",
-  "version": "1.0.0+27",
-  "version_code": 27
+  "tag": "orbita-v1.0.0-b28",
+  "version": "1.0.0+28",
+  "version_code": 28
 }
