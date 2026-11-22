@@ -1,0 +1,21 @@
+{
+  "app_id": "com.luca.orbita",
+  "assets": {
+    "android-all": {
+      "filename": "com.luca.orbita-1.0.0-b25-android-all.apk",
+      "sha256": "0eb4971ce0ca2cedfb7fa4467c3907632fb79f8445489915cf5a88238f905b1f",
+      "signature": null,
+      "size": 68990051
+    }
+  },
+  "channel": "stable",
+  "min_supported_code": null,
+  "notes": "Merge pull request #23 from Luca2000123/fix/tour-fixes\n\nfix(app): correzioni dal giro completo sul telefono",
+  "notes_url": "https://github.com/Luca2000123/updates/releases/tag/orbita-v1.0.0-b25",
+  "pub_date": "2026-11-22T16:19:09Z",
+  "repo": "Luca2000123/updates",
+  "schema": 1,
+  "tag": "orbita-v1.0.0-b25",
+  "version": "1.0.0+25",
+  "version_code": 25
+}
