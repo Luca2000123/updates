@@ -2,20 +2,20 @@
   "app_id": "com.luca.orbita",
   "assets": {
     "android-all": {
-      "filename": "com.luca.orbita-1.0.0-b25-android-all.apk",
-      "sha256": "0eb4971ce0ca2cedfb7fa4467c3907632fb79f8445489915cf5a88238f905b1f",
+      "filename": "com.luca.orbita-1.0.0-b26-android-all.apk",
+      "sha256": "8ec44f34c01edbe33ef0526cb665cbbf4a13fd6b8fac5270f2f2b6ec4f97544a",
       "signature": null,
-      "size": 68990051
+      "size": 69071971
     }
   },
   "channel": "stable",
   "min_supported_code": null,
-  "notes": "Merge pull request #23 from Luca2000123/fix/tour-fixes\n\nfix(app): correzioni dal giro completo sul telefono",
-  "notes_url": "https://github.com/Luca2000123/updates/releases/tag/orbita-v1.0.0-b25",
-  "pub_date": "2026-11-22T16:19:09Z",
+  "notes": "Merge pull request #24 from Luca2000123/feat/ztl-avoidance\n\nfeat(routing): evita le ZTL, avviso e 'Avvia comunque'",
+  "notes_url": "https://github.com/Luca2000123/updates/releases/tag/orbita-v1.0.0-b26",
+  "pub_date": "2026-11-22T16:26:25Z",
   "repo": "Luca2000123/updates",
   "schema": 1,
-  "tag": "orbita-v1.0.0-b25",
-  "version": "1.0.0+25",
-  "version_code": 25
+  "tag": "orbita-v1.0.0-b26",
+  "version": "1.0.0+26",
+  "version_code": 26
 }
